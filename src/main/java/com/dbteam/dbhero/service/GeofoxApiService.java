@@ -21,6 +21,7 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 
 import com.dbteam.dbhero.models.geofox.GRRequest;
+import com.dbteam.dbhero.models.geofox.GRResponse;
 import com.dbteam.dbhero.models.geofox.Info;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -48,8 +49,8 @@ public class GeofoxApiService {
 		return result;
 	}
 	
-	public Info getRoute(GRRequest model) throws ClientProtocolException, IOException, InvalidKeyException, NoSuchAlgorithmException {
-		Info result = null;
+	public GRResponse getRoute(GRRequest model) throws ClientProtocolException, IOException, InvalidKeyException, NoSuchAlgorithmException {
+		GRResponse result = null;
 		ObjectMapper mapper = new ObjectMapper();
 		HttpClient httpclient = HttpClientBuilder.create().build();
 		HttpPost postRequest = new HttpPost(uri + "/getRoute");
@@ -63,7 +64,7 @@ public class GeofoxApiService {
 		if (entity != null) {
 			String json = EntityUtils.toString(entity);
 			
-			result = mapper.readValue(json, Info.class);
+			result = mapper.readValue(json, GRResponse.class);
 		}
 
 		return result;
