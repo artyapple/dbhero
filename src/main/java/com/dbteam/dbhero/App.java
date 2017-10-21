@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.telegram.telegrambots.api.methods.send.SendDocument;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
@@ -16,7 +15,10 @@ import org.telegram.telegrambots.exceptions.TelegramApiException;
 import com.dbteam.dbhero.models.geofox.Destination;
 import com.dbteam.dbhero.models.geofox.GRRequest;
 import com.dbteam.dbhero.models.geofox.GRResponse;
+import com.dbteam.dbhero.models.geofox.RealtimeSchedule;
+import com.dbteam.dbhero.models.geofox.ScheduleElement;
 import com.dbteam.dbhero.models.geofox.Start;
+import com.dbteam.dbhero.models.geofox.Ticket;
 import com.dbteam.dbhero.models.geofox.Time;
 import com.dbteam.dbhero.service.GeofoxApiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -77,12 +79,14 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 				answerMessage.setText(messageFeedback(username));
 			} else if (iNeedPolice(content)) {
 				answerMessage.setText(messagePolice(message));
-			} else if (content.equals("book")){
+			} else if (isReading(content)){
 				Long chatId = message.getChatId();
 				String caption = "The Old Man and the Sea - Ernest Hemingway";
 				java.io.File bookf = new File("C:\\Users\\AI\\Desktop\\Hemmingway_The Old Man and the Sea_1952.pdf");
 				sendDocUploadingAFile(chatId, bookf, caption);
-				
+				answerMessage.setText(getBook());
+			} else if (isGoodTravel(content)){
+				answerMessage.setText(totalTravelingTime());
 			} else {
 				answerMessage.setText("");
 			}
@@ -92,7 +96,7 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 			answerMessage.setText(buildRouteGeoFox(travel));
 			System.out.println(lokation.getLatitude()+ " ::: " +lokation.getLongitude());
 		} else {
-
+			
 		}
 
 		sendMessage(answerMessage); // Call method to send the message
@@ -137,6 +141,22 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 			res = true;
 		return res;
 	}
+	
+	private boolean isReading(String prob) {
+		boolean res = false;
+		String dest = prob.toLowerCase();
+		if (dest.contains("reading"))
+			res = true;
+		return res;
+	}
+	
+	private boolean isGoodTravel(String prob){
+		boolean res = false;
+		String dest = prob.toLowerCase();
+		if (dest.contains("good"))
+			res = true;
+		return res;
+	}
 
 	private boolean iNeedPolice(String prob) {
 		boolean res = false;
@@ -152,7 +172,8 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 		try {
 			GRRequest req = new  GRRequest();
 			Start start =new Start();
-			start.setCombinedName("Hamburg, Stadthausbrücke");
+			String startAddr = apiService.getNearstStation(travel.startLocation.getLongitude(),travel.startLocation.getLatitude());
+			start.setCombinedName(startAddr);
 			req.setStart(start);
 			Destination dest = new Destination();
 			dest.setCombinedName(travel.cityEnd +" , "+ travel.streetEnd);
@@ -164,8 +185,9 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 			req.setTimeIsDeparture(true);
 			req.setRealtime("REALTIME");
 			GRResponse result = apiService.getRoute(req);
-			ObjectMapper mapper = new ObjectMapper();
-			String out = mapper.writeValueAsString(result);
+			String out = getFormattedResponse(result);
+			//ObjectMapper mapper = new ObjectMapper();
+			//String out = mapper.writeValueAsString(result);
 			return out;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -180,6 +202,43 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 		return "no data";
 	}
 	
+	private String getFormattedResponse(GRResponse obj) {
+		StringBuilder response = new StringBuilder();
+		response.append("We have the best traffic route for you and I will support you on the way.");
+		response.append("\n");
+		RealtimeSchedule schedule = obj.getRealtimeSchedules().get(0);
+		for(ScheduleElement element : schedule.getScheduleElements()){
+			String startName = element.getFrom().getCombinedName();
+			String startTime = element.getFrom().getDepTime().getTime(); 
+			response.append("From: "+startName + " at "+startTime);
+			response.append("\n");
+			String line = element.getLine().getName();
+			String origin = element.getLine().getOrigin();
+			String direction = element.getLine().getDirection();
+			if(!line.equals("Umstiegsfußweg")){
+				response.append("Line: "+line);
+				response.append("\n");
+				response.append("Direction: "+  direction);
+			} else {
+				response.append("Walking");
+			}
+			response.append("\n");
+			String endName = element.getTo().getCombinedName();
+			String endTime = element.getTo().getArrTime().getTime();
+			response.append("To: "+endName + " at "+endTime);
+			response.append("\n");
+			response.append("-------------------------------");
+			response.append("\n");
+		}
+		Ticket ticket = schedule.getTickets().get(0);
+		response.append(ticket.getType() +" " + ticket.getPrice());
+		response.append("\n");
+		response.append("\n");
+		response.append("[Ticket](https://shop.hvv.de/index.php/product/40/show/0/0/0/0)");
+		 		
+		return response.toString();
+	}
+
 	private void sendDocUploadingAFile(Long chatId, java.io.File save,String caption) throws TelegramApiException {
 
 	    SendDocument sendDocumentRequest = new SendDocument();
@@ -192,5 +251,13 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 	private String messageWhereIsStart(){
 		return "Where should we start?";
 	}
+	
+	private String totalTravelingTime(){
+		return "The total traveling time is around 45 minutes, hopefully Deutsche Bahn will not be late for 74 sec this time 😉  Wanna have some entertainment? ";
+	}
+	
+	private String getBook(){
+		return "The Old man and the fish is nice choice for the short trip. Have fun!";
+	} 
 
 }

@@ -50,6 +50,7 @@ public class GeofoxApiService {
 	}
 	
 	public GRResponse getRoute(GRRequest model) throws ClientProtocolException, IOException, InvalidKeyException, NoSuchAlgorithmException {
+		model.setVersion(31);
 		GRResponse result = null;
 		ObjectMapper mapper = new ObjectMapper();
 		HttpClient httpclient = HttpClientBuilder.create().build();
