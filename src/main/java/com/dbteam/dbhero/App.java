@@ -1,9 +1,12 @@
 package com.dbteam.dbhero;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.telegram.telegrambots.api.methods.send.SendDocument;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Location;
 import org.telegram.telegrambots.api.objects.Message;
@@ -52,6 +55,7 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 		return telegramToken;
 	}
 
+	@Autowired
 	private void handleIncomingMessage(Message message) throws TelegramApiException {
 
 		System.out.println("bla");
@@ -68,20 +72,24 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 				travel = new Travel();
 				travel.setStreet(dest[1]);
 				travel.setCity(dest[0]);
-				
-				answerMessage.setText(buildRouteGeoFox(travel));
-				
+				answerMessage.setText(messageWhereIsStart());
 			} else if (isProblem(content)) {
 				answerMessage.setText(messageFeedback(username));
 			} else if (iNeedPolice(content)) {
 				answerMessage.setText(messagePolice(message));
-
-			} else {// WRONG INPUT
-
+			} else if (content.equals("book")){
+				Long chatId = message.getChatId();
+				String caption = "The Old Man and the Sea - Ernest Hemingway";
+				java.io.File bookf = new File("C:\\Users\\AI\\Desktop\\Hemmingway_The Old Man and the Sea_1952.pdf");
+				sendDocUploadingAFile(chatId, bookf, caption);
+				
+			} else {
+				answerMessage.setText("");
 			}
 		} else if (message.hasLocation()) {
 			Location lokation = message.getLocation();
-			//travel.setStartLocation(lokation);
+			travel.setStartLocation(lokation);
+			answerMessage.setText(buildRouteGeoFox(travel));
 			System.out.println(lokation.getLatitude()+ " ::: " +lokation.getLongitude());
 		} else {
 
@@ -170,6 +178,19 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 			e.printStackTrace();
 		}
 		return "no data";
+	}
+	
+	private void sendDocUploadingAFile(Long chatId, java.io.File save,String caption) throws TelegramApiException {
+
+	    SendDocument sendDocumentRequest = new SendDocument();
+	    sendDocumentRequest.setChatId(chatId);
+	    sendDocumentRequest.setNewDocument(save);
+	    sendDocumentRequest.setCaption(caption);
+	    sendDocument(sendDocumentRequest);
+	}
+	
+	private String messageWhereIsStart(){
+		return "Where should we start?";
 	}
 
 }
