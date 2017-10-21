@@ -42,22 +42,13 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 
 	private void handleIncomingMessage(Message message) throws TelegramApiException {
 
+		System.out.println("bla");
 		String username = message.getFrom().getFirstName();
-		SendMessage answerMessage = new SendMessage() // Create a SendMessage
-														// object with mandatory
-														// fields
-				.setChatId(message.getChatId());
+		SendMessage answerMessage = new SendMessage().setChatId(message.getChatId());
 
-		if (message.hasLocation()) {
-			Location lokation = message.getLocation();
-			travel.setStartLocation(lokation);
-			System.out.println(lokation);			
-		} else if (message.hasPhoto()) {
-			System.out.println("thank you!");
-			answerMessage.setText(thankYou());
-		} else if (message.hasText()) {
+		if (message.hasText()) {
 			String content = message.getText();
-					
+
 			if (content.equalsIgnoreCase("/start")) {
 				answerMessage.setText(messageDefault(username));
 			} else if (isDestination(content)) {
@@ -65,13 +56,18 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 				travel = new Travel();
 				travel.setStreet(dest[1]);
 				travel.setCity(dest[0]);
-			} else if (content.toLowerCase().contains("feedback")) {
+			} else if (isProblem(content)) {
 				answerMessage.setText(messageFeedback(username));
-			} else if (content.toLowerCase().contains("damage")) {
-				answerMessage.setText(messageDamage());
+			} else if (iNeedPolice(content)) {
+				answerMessage.setText(messagePolice(message));
+
 			} else {// WRONG INPUT
 
 			}
+		} else if (message.hasLocation()) {
+			Location lokation = message.getLocation();
+			travel.setStartLocation(lokation);
+			System.out.println(lokation);
 		} else {
 
 		}
@@ -81,11 +77,11 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 	}
 
 	private String messageDefault(String name) {
-		return "Привет, " + name + "!" + "Как дела? Куда поедем?";
+		return "Hi, "+ name +", welcome on board! I’m Captain Howl, well known travel buddy for Hamburg area. Where are we going today?";
 	}
 
 	private String messageFeedback(String name) {
-		return name + ", что то случилось? Хочешь оставить отзыв или увидел какую-то паломку?";
+		return "Oh... Noted! I’ve told me colleagues, they’ll manage that asap! Thank you for informing, " + name + "!";
 	}
 
 	private String messageDamage() {
@@ -95,12 +91,41 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 	private String thankYou() {
 		return "Cпасибо!";
 	}
+	
+	private String messagePolice(Message old){
+		SendMessage fMessage = new SendMessage().setChatId(old.getChatId());
+		fMessage.setText("Keep clam. Police is coming!");
+		try {
+			sendMessage(fMessage);
+		} catch (TelegramApiException e) {
+			e.printStackTrace();
+		}
+		return "Keep distance from this person and don’t pay attention to him. Would you like me to share your phone number with the nearest policeman?";
+	}
 
 	private boolean isDestination(String dest) {
 		boolean res = false;
 		if (dest.equalsIgnoreCase("Hamburg"))
 			res = true;
 		if (dest.equalsIgnoreCase("Berlin"))
+			res = true;
+		return res;
+	}
+
+	private boolean isProblem(String prob) {
+		boolean res = false;
+		String dest = prob.toLowerCase();
+		if (dest.contains("broken"))
+			res = true;
+		if (dest.contains("fallen"))
+			res = true;
+		return res;
+	}
+
+	private boolean iNeedPolice(String prob) {
+		boolean res = false;
+		String dest = prob.toLowerCase();
+		if (dest.contains("drunk"))
 			res = true;
 		return res;
 	}
