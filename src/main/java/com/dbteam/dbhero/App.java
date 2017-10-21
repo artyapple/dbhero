@@ -1,10 +1,22 @@
 package com.dbteam.dbhero;
 
+import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Location;
 import org.telegram.telegrambots.api.objects.Message;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
+
+import com.dbteam.dbhero.models.geofox.Destination;
+import com.dbteam.dbhero.models.geofox.GRRequest;
+import com.dbteam.dbhero.models.geofox.GRResponse;
+import com.dbteam.dbhero.models.geofox.Start;
+import com.dbteam.dbhero.models.geofox.Time;
+import com.dbteam.dbhero.service.GeofoxApiService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 
@@ -52,10 +64,13 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 			if (content.equalsIgnoreCase("/start")) {
 				answerMessage.setText(messageDefault(username));
 			} else if (isDestination(content)) {
-				String[] dest = content.replaceAll(" ", "").split(",");
+				String[] dest = content.replaceAll(" ", "").split(",");				
 				travel = new Travel();
 				travel.setStreet(dest[1]);
 				travel.setCity(dest[0]);
+				
+				answerMessage.setText(buildRouteGeoFox(travel));
+				
 			} else if (isProblem(content)) {
 				answerMessage.setText(messageFeedback(username));
 			} else if (iNeedPolice(content)) {
@@ -66,8 +81,8 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 			}
 		} else if (message.hasLocation()) {
 			Location lokation = message.getLocation();
-			travel.setStartLocation(lokation);
-			System.out.println(lokation);
+			//travel.setStartLocation(lokation);
+			System.out.println(lokation.getLatitude()+ " ::: " +lokation.getLongitude());
 		} else {
 
 		}
@@ -84,14 +99,6 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 		return "Oh... Noted! I’ve told me colleagues, they’ll manage that asap! Thank you for informing, " + name + "!";
 	}
 
-	private String messageDamage() {
-		return "Жду фото";
-	}
-
-	private String thankYou() {
-		return "Cпасибо!";
-	}
-	
 	private String messagePolice(Message old){
 		SendMessage fMessage = new SendMessage().setChatId(old.getChatId());
 		fMessage.setText("Keep clam. Police is coming!");
@@ -103,11 +110,12 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 		return "Keep distance from this person and don’t pay attention to him. Would you like me to share your phone number with the nearest policeman?";
 	}
 
-	private boolean isDestination(String dest) {
+	private boolean isDestination(String desti) {
 		boolean res = false;
-		if (dest.equalsIgnoreCase("Hamburg"))
+		String dest = desti.toLowerCase();
+		if (dest.contains("hamburg"))
 			res = true;
-		if (dest.equalsIgnoreCase("Berlin"))
+		if (dest.contains("berlin"))
 			res = true;
 		return res;
 	}
@@ -128,6 +136,40 @@ public class App extends org.telegram.telegrambots.bots.TelegramLongPollingBot {
 		if (dest.contains("drunk"))
 			res = true;
 		return res;
+	}
+	
+	private String buildRouteGeoFox(Travel travel){
+		GeofoxApiService apiService = new GeofoxApiService();
+		
+		try {
+			GRRequest req = new  GRRequest();
+			Start start =new Start();
+			start.setCombinedName("Hamburg, Stadthausbrücke");
+			req.setStart(start);
+			Destination dest = new Destination();
+			dest.setCombinedName(travel.cityEnd +" , "+ travel.streetEnd);
+			req.setDest(dest);
+			Time time = new Time();
+			time.setDate("heute");
+			time.setTime("jetzt");
+			req.setTime(time);
+			req.setTimeIsDeparture(true);
+			req.setRealtime("REALTIME");
+			GRResponse result = apiService.getRoute(req);
+			ObjectMapper mapper = new ObjectMapper();
+			String out = mapper.writeValueAsString(result);
+			return out;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidKeyException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "no data";
 	}
 
 }

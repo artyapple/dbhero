@@ -23,48 +23,19 @@ public class DbheroApplication {
 
 
 		SpringApplication.run(DbheroApplication.class, args);
-		GeofoxApiService apiService = new GeofoxApiService();
+				
+		BasicConfig bc = new BasicConfig();
+		
+		JCommander.newBuilder().addObject(bc).build().parse(args);
+
+		ApiContextInitializer.init();
+		TelegramBotsApi botsApi = new TelegramBotsApi();
+		
 		try {
-			GRRequest req = new  GRRequest();
-			Start start =new Start();
-			start.setCombinedName("Ahrensburg, Rosenhof");
-			req.setStart(start);
-			Destination dest = new Destination();
-			dest.setCombinedName("Hamburg, Stadthausbrücke");
-			req.setDest(dest);
-			Time time = new Time();
-			time.setDate("heute");
-			time.setTime("jetzt");
-			req.setTime(time);
-			req.setTimeIsDeparture(true);
-			req.setRealtime("REALTIME");
-			GRResponse result = apiService.getRoute(req);
-			ObjectMapper mapper = new ObjectMapper();
-			String out = mapper.writeValueAsString(result);
-			System.out.println(out);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
+			botsApi.registerBot(new App(bc));
+		} catch (TelegramApiRequestException e) {
 			e.printStackTrace();
 		}
-		
-//		BasicConfig bc = new BasicConfig();
-//		
-//		JCommander.newBuilder().addObject(bc).build().parse(args);
-//
-//		ApiContextInitializer.init();
-//		TelegramBotsApi botsApi = new TelegramBotsApi();
-//		
-//		try {
-//			botsApi.registerBot(new App(bc));
-//		} catch (TelegramApiRequestException e) {
-//			e.printStackTrace();
-//		}
 
 	}
 
