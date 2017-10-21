@@ -21,7 +21,6 @@ public class DbheroApplication {
 
 	public static void main(String[] args) {
 
-
 		SpringApplication.run(DbheroApplication.class, args);
 				
 		BasicConfig bc = new BasicConfig();

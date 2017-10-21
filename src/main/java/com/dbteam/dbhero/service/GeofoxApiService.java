@@ -5,6 +5,8 @@ import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.List;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
@@ -20,9 +22,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 
-import com.dbteam.dbhero.models.geofox.GRRequest;
-import com.dbteam.dbhero.models.geofox.GRResponse;
-import com.dbteam.dbhero.models.geofox.Info;
+import com.dbteam.dbhero.models.geofox.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class GeofoxApiService {
@@ -65,6 +65,43 @@ public class GeofoxApiService {
 			String json = EntityUtils.toString(entity);
 			
 			result = mapper.readValue(json, GRResponse.class);
+		}
+
+		return result;
+	}
+	
+	public String getNearstStation(float latitude, float longitude) throws ClientProtocolException, IOException, InvalidKeyException, NoSuchAlgorithmException {
+		String result = "";
+		ObjectMapper mapper = new ObjectMapper();
+		HttpClient httpclient = HttpClientBuilder.create().build();
+		HttpPost postRequest = new HttpPost(uri + "/checkName");
+		CNRequest model = new CNRequest();
+		Coordinate coordinate = new Coordinate();
+		coordinate.setX((double)latitude);
+		coordinate.setY((double)longitude);
+		TheName theName = new TheName();
+		theName.setCoordinate(coordinate);
+		theName.setType("STATION");
+		model.setTheName(theName);
+		model.setCoordinateType("EPSG_4326");
+		model.setMaxList(1);
+		model.setMaxDistance(500);
+		model.setVersion(31);
+		String jsonInString = mapper.writeValueAsString(model);
+		postRequest.setEntity(new ByteArrayEntity(jsonInString.getBytes()));		
+		Header[] headers = getHeaders(EntityUtils.toByteArray(postRequest.getEntity()));
+		postRequest.setHeaders(headers);
+
+		HttpResponse httpResponse = httpclient.execute(postRequest);
+		HttpEntity entity = httpResponse.getEntity();
+		if (entity != null) {
+			String json = EntityUtils.toString(entity);
+			
+			CNResponse response = mapper.readValue(json, CNResponse.class);
+			List<Result> list = response.getResults();
+			if(list != null && !list.isEmpty()) {
+				result = list.get(0).getCombinedName();
+			}
 		}
 
 		return result;
